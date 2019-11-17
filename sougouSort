@@ -1,0 +1,175 @@
+package hadoop.ch05.lrj16124080239;
+import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+public class sougouSort {
+
+    public static class SougourMapper
+            extends Mapper<Object, Text, rank_order, NullWritable>{
+        public void map(Object key, Text value, Context context
+        ) throws IOException, InterruptedException {
+
+            String data = value.toString();
+            String data1 = data.replaceAll("[,，]", "");
+            String data2 = data1.replaceAll("\\s+", ",");
+            String[] words = data2.split(",");
+
+            rank_order e = new rank_order();
+            e.setTime(words[0]);
+            e.setId(words[1]);
+            e.setName(words[2]);
+            e.setRank(Integer.parseInt(words[3]));
+            e.setOrder(Integer.parseInt(words[4]));
+            e.setWeb(words[5]);
+            context.write(e, NullWritable.get());
+        }
+    }
+
+    public static class MyEmployeeParitioner extends Partitioner<rank_order,NullWritable>{//利用分区的方式。将题目条件按照分区
+        public int getPartition(rank_order k2, NullWritable v2, int numPartitioner)  {
+            if (k2.getRank()== 1&& k2.getOrder() == 2) {
+                return 0%numPartitioner ;
+            }else{
+                return 1%numPartitioner;
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+        if (otherArgs.length < 2) {
+            System.err.println("Usage: wordcount <in> [<in>...] <out>");
+            System.exit(2);
+        }
+
+        Job job = new Job(conf, "word count");
+        job.setJarByClass(sougouSort.class);
+
+        job.setMapperClass(SougourMapper.class);
+        job.setMapOutputKeyClass(rank_order.class);
+        job.setMapOutputValueClass(NullWritable.class);
+
+        job.setPartitionerClass(MyEmployeeParitioner.class);
+        job.setNumReduceTasks(2);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+        for (int i = 0; i < otherArgs.length - 1; ++i) {
+            FileInputFormat.addInputPath(job, new Path(otherArgs[i]));
+        }
+        FileOutputFormat.setOutputPath(job,
+                new Path(otherArgs[otherArgs.length - 1]));
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
+
+--------------------------------------------------------------------------------------------
+package hadoop.ch05.lrj16124080239;
+import org.apache.hadoop.io.WritableComparable;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+public class rank_order implements WritableComparable<rank_order> {
+    private String time ;
+    private String id ;
+    private String name ;
+    private int rank ;
+    private int order ;
+    private String web ;
+
+    @Override
+    public void readFields(DataInput input) throws IOException {
+        this.time = input.readUTF();
+        this.id = input.readUTF();
+        this.name = input.readUTF();
+        this.rank = input.readInt();
+        this.order = input.readInt();
+        this.web = input.readUTF();
+    }
+
+    @Override
+    public void write(DataOutput output) throws IOException {
+        output.writeUTF(this.time);
+        output.writeUTF(this.id);
+        output.writeUTF(this.name);
+        output.writeInt(this.rank);
+        output.writeInt(this.order);
+        output.writeUTF(this.web);
+    }
+
+    public String getTime() {
+        return time;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getRank() {
+        return rank;
+    }
+
+    public int getOrder() {
+        return order;
+    }
+
+    public String getWeb() {
+        return web;
+    }
+
+    public void setTime(String time) {
+        this.time = time;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setRank(int rank) {
+        this.rank = rank;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    public void setWeb(String web) {
+        this.web = web;
+    }
+
+    @Override
+    public String toString() {
+        return   time + "," + id + "," + name + "," + rank +"," + order +"," + web ;
+    }
+
+    @Override
+    public int compareTo(rank_order o) {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+
+}
+
+
+
+
+
